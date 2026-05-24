@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  # 1. The Database
+  mongo:
+    image: mongo:latest
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  # 2. The AI Model Service
+  ai_model:
+    build: ./ai_model
+    container_name: ai_model
+    ports:
+      - "8000:8000"
+    # The AI server code must be in a file named 'ai_server.py' inside ai_model folder
+
+  # 3. The Backend API
+  backend:
+    build: ./backend
+    container_name: backend
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mongo
+      - ai_model
+    environment:
+      - PORT=5000
+      # Notice: We use the service name 'mongo' here, not localhost
+      - MONGO_URI=mongodb://mongo:27017/predictive_maintenance
+      # Notice: We use the service name 'ai_model' here
+      - AI_SERVICE_URL=http://ai_model:8000/predict
+
+  # 4. The Frontend Dashboard
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    # This allows the React app to update when you save files (Hot Reload)
+    volumes:
+      - ./frontend/src:/app/src
+
+volumes:
+  mongo_data:
